@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "name": "mailing-backend",
+  "name": "file-upload-backend",
   "builds": [
     { "src": "server.js", "use": "@vercel/node" }
   ],
