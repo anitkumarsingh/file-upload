@@ -19,7 +19,7 @@ const app = express();
 app.use(cors());
 app.use(morgan('dev'));
 
-const MuiltiPartyMiddleware = multiparty({uploadDir:"./images"});
+const MuiltiPartyMiddleware = multiparty({uploadDir:"/images"});
 app.use(bodyparser.urlencoded({extended: false}));
 app.use(bodyparser.json());
 app.use(express.static("uploads"));
