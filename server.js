@@ -1,6 +1,7 @@
 const express = require('express');
-const bodyparser = require ('body-parser');
-const multiparty = require('connect-multiparty');
+const errorResponse = require('./utils/errorResponse');
+const asyncHandler = require('./middleware/asyncHandler');
+const fileupload = require('express-fileupload');
 const cors = require('cors');
 const morgan = require('morgan');
 const dotenv = require('dotenv');
@@ -9,21 +10,18 @@ dotenv.config();
 
 const path = require('path');
 
-const fs = require('fs');
-
-
-
 const PORT = process.env.PORT ||  5000;
 const app = express();
 
 app.use(cors());
+// Body parser
+app.use(express.json());
 app.use(morgan('dev'));
 
-const MuiltiPartyMiddleware = multiparty({uploadDir:"/images"});
-app.use(bodyparser.urlencoded({extended: false}));
-app.use(bodyparser.json());
-app.use(express.static("uploads"));
-
+// File upload
+app.use(fileupload());
+// set static folder
+app.use(express.static(path.join(__dirname, 'public')));
 
 app.get('/', ( req, res) =>{
     res.status(200).json(
@@ -34,29 +32,37 @@ app.get('/', ( req, res) =>{
 });
 
 
-
-app.post('/upload', MuiltiPartyMiddleware, (req, res) =>{
-    console.log(req.files.file)
-    var TempFile = req.files.file ? req.files.file :req.files.upload;
-    var TempPathfile = TempFile.path;
-
-   const targetPathUrl = path.join(__dirname,"./uploads/"+TempFile.name);
-
-   if(path.extname(TempFile.originalFilename).toLowerCase() === ".png" || ".jpg"){
-     
-    fs.rename(TempPathfile, targetPathUrl, err =>{
-
+app.post('/upload',asyncHandler(async(req,res,next)=>{
+    if (!req.files) {
+        return next(new errorResponse(`Please upload file`, 400));
+      }
+      const file = req.files.files;
+      // Checking if file type is image
+      if (!file.mimetype.startsWith('image')) {
+        return next(new errorResponse(`Please upload image file`, 400));
+      }
+      // File size checking
+      if (file.size > process.env.FILE_UPLOAD_SIZE) {
+        return next(
+          new errorResponse(
+            `Please upload image file of size less than ${process.env.FILE_UPLOAD_SIZE}`,
+            400
+          )
+        );
+      }
+      // create custom file name
+      file.name = `blog_photo_${Math.ceil(Math.random() * 10 + 1)}${path.parse(file.name).ext}`;
+      file.mv(`${process.env.FILE_UPLOAD_PATH}/${file.name}`, async (err) => {
+        if (err) {
+          console.error(err);
+          return next(new errorResponse(`Problem with file upload`, 500));
+        }
         res.status(200).json({
-         uploaded: true,
-          url: `${req.protocol}://${req.hostname}:${process.env.PORT}/${TempFile.originalFilename}`
+          success: true,
+          msg: 'File uploaded successfully!',
+          url: `${req.protocol}://${req.hostname}:${process.env.PORT}/uploads/${file.name}`
         });
-
-        if(err) return console.log(err);
-    })
-   }
-
-
-    console.log(req.files);
-})
+      });    
+}))
 
 app.listen(PORT,console.log(`Server is runing on ${PORT}`));
