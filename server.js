@@ -36,7 +36,7 @@ app.post('/upload',asyncHandler(async(req,res,next)=>{
     if (!req.files) {
         return next(new errorResponse(`Please upload file`, 400));
       }
-      const file = req.files.files;
+      const file = req.files.file;
       // Checking if file type is image
       if (!file.mimetype.startsWith('image')) {
         return next(new errorResponse(`Please upload image file`, 400));
